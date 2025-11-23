@@ -47,7 +47,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
+    <div className="h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
       {/* Header */}
       <div className="shadow-sm border-b px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -80,7 +80,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4" style={{ maxHeight: 'calc(100vh - 140px)' }}>
         {messages.length === 0 ? (
           <div className="text-center mt-6 sm:mt-8" style={{ color: 'var(--muted)' }}>
             <p className="text-sm sm:text-base">No messages yet. Start the conversation!</p>
@@ -107,7 +107,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
                 </div>
                 <button
                   onClick={() => navigator.clipboard.writeText(message.text)}
-                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full border text-xs"
+                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity p-1 rounded-full border text-xs touch-manipulation"
                   style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
                   title="Copy message"
                 >
