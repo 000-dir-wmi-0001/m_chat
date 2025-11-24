@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTheme } from './ThemeProvider';
+import { Copy, Moon, Sun, Send } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -55,10 +56,11 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           <span className="font-mono text-base sm:text-lg font-bold" style={{ color: 'var(--fg)' }}>{roomCode}</span>
           <button
             onClick={copyCode}
-            className="text-xs px-2 py-1 rounded transition-colors border"
+            className="p-1.5 rounded transition-colors border"
             style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--fg)' }}
+            title="Copy room code"
           >
-            Copy
+            <Copy size={14} />
           </button>
         </div>
         <div className="flex items-center space-x-2">
@@ -67,7 +69,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
             className="p-1.5 sm:p-2 rounded-lg border"
             style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
           >
-            {theme === 'light' ? '🌙' : '☀️'}
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           <button
             onClick={onLeaveChat}
@@ -107,11 +109,11 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
                 </div>
                 <button
                   onClick={() => navigator.clipboard.writeText(message.text)}
-                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity p-1 rounded-full border text-xs touch-manipulation"
+                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity p-1 rounded-full border touch-manipulation"
                   style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
                   title="Copy message"
                 >
-                  📋
+                  <Copy size={12} />
                 </button>
               </div>
             </div>
@@ -141,7 +143,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
             {isSending ? (
               <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-current border-t-transparent"></div>
             ) : (
-              'Send'
+              <Send size={16} />
             )}
           </button>
         </div>
