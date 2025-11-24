@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Temporary Chat",
+  title: "M Chat",
   description: "Simple one-to-one temporary chat application",
 };
 
