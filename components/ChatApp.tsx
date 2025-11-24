@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
+import SafetyWarning from './SafetyWarning';
 import HomeScreen from './HomeScreen';
 import ChatScreen from './ChatScreen';
 
@@ -13,7 +14,7 @@ interface Message {
 }
 
 export default function ChatApp() {
-  const [screen, setScreen] = useState<'home' | 'chat'>('home');
+  const [screen, setScreen] = useState<'warning' | 'home' | 'chat'>('warning');
   const [roomCode, setRoomCode] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -38,11 +39,16 @@ export default function ChatApp() {
 
   const generateCode = () => {
     console.log('Emitting createRoom event');
-    socket?.emit('createRoom', {}, (response: { code: string }) => {
+    socket?.emit('createRoom', {}, (response: { code?: string; error?: string }) => {
       console.log('Received createRoom response:', response);
-      setRoomCode(response.code);
-      setDisplayCode(response.code);
-      // Don't auto-redirect to chat, stay on home to show code
+      if (response.error) {
+        alert(response.error);
+        return;
+      }
+      if (response.code) {
+        setRoomCode(response.code);
+        setDisplayCode(response.code);
+      }
     });
   };
 
@@ -102,8 +108,8 @@ export default function ChatApp() {
       console.log('User left:', data.userId);
     };
 
-    const handleRoomExpired = () => {
-      alert('Room has expired');
+    const handleUserDisconnected = () => {
+      alert('Other user disconnected. Returning to home.');
       setScreen('home');
       setRoomCode('');
       setMessages([]);
@@ -112,23 +118,31 @@ export default function ChatApp() {
     socket.on('newMessage', handleNewMessage);
     socket.on('userJoined', handleUserJoined);
     socket.on('userLeft', handleUserLeft);
-    socket.on('roomExpired', handleRoomExpired);
+    socket.on('userDisconnected', handleUserDisconnected);
 
     return () => {
       socket.off('newMessage', handleNewMessage);
       socket.off('userJoined', handleUserJoined);
       socket.off('userLeft', handleUserLeft);
-      socket.off('roomExpired', handleRoomExpired);
+      socket.off('userDisconnected', handleUserDisconnected);
     };
   }, [socket, screen, roomCode]);
 
+  const acceptWarning = () => {
+    setScreen('home');
+  };
+
   const leaveChat = () => {
-    socket?.disconnect();
-    socket?.connect();
+    // Emit leave room event to notify other user
+    socket?.emit('leaveRoom', { code: roomCode });
     setScreen('home');
     setRoomCode('');
     setMessages([]);
   };
+
+  if (screen === 'warning') {
+    return <SafetyWarning onAccept={acceptWarning} />;
+  }
 
   if (screen === 'home') {
     return <HomeScreen onGenerateCode={generateCode} onJoinCode={joinCode} generatedCode={displayCode} />;
