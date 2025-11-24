@@ -5,6 +5,8 @@ import { io, Socket } from 'socket.io-client';
 import SafetyWarning from './SafetyWarning';
 import HomeScreen from './HomeScreen';
 import ChatScreen from './ChatScreen';
+import Header from './Header';
+import Footer from './Footer';
 
 interface Message {
   id: string;
@@ -141,11 +143,23 @@ export default function ChatApp() {
   };
 
   if (screen === 'warning') {
-    return <SafetyWarning onAccept={acceptWarning} />;
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
+        <Header />
+        <SafetyWarning onAccept={acceptWarning} />
+        <Footer />
+      </div>
+    );
   }
 
   if (screen === 'home') {
-    return <HomeScreen onGenerateCode={generateCode} onJoinCode={joinCode} generatedCode={displayCode} />;
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
+        <Header />
+        <HomeScreen onGenerateCode={generateCode} onJoinCode={joinCode} generatedCode={displayCode} />
+        <Footer />
+      </div>
+    );
   }
 
   return (
