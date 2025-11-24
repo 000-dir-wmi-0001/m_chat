@@ -1,76 +1,128 @@
 'use client';
 
-import { AlertTriangle, X, AlertCircle, Info } from 'lucide-react';
+import { AlertTriangle, X, AlertCircle, Info, Shield, CheckCircle, ArrowRight, Mail } from 'lucide-react';
 
 interface SafetyWarningProps {
   onAccept: () => void;
 }
 
 export default function SafetyWarning({ onAccept }: SafetyWarningProps) {
-
-
   return (
-    <div className="flex-1 flex items-center justify-center p-4 sm:p-6" style={{ background: 'var(--bg)' }}>
-      <div className="rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-sm sm:max-w-lg border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-        <div className="text-center mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold flex items-center justify-center gap-2" style={{ color: 'var(--fg)' }}>
-            <AlertTriangle size={24} className="text-red-500" />
+    <div className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-auto" style={{ background: 'var(--bg)' }}>
+      <div className="rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full mb-3 sm:mb-4" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+            <AlertTriangle size={20} className="sm:w-6 sm:h-6 md:w-8 md:h-8" />
+          </div>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2" style={{ color: 'var(--fg)' }}>
             Safety Warning
           </h1>
-          <p className="text-xs sm:text-sm mt-1" style={{ color: 'var(--muted)' }}>
-            Please read before using M-Chat
+          <p className="text-sm sm:text-base md:text-lg" style={{ color: 'var(--muted)' }}>
+            Read before using M Chat
           </p>
         </div>
 
-        <div className="space-y-4 text-sm sm:text-base" style={{ color: 'var(--fg)' }}>
-          <div>
-            <h3 className="font-semibold mb-2 flex items-center gap-2" style={{ color: 'var(--fg)' }}>
-              <X size={16} className="text-red-500" />
-              Do NOT share:
-            </h3>
-            <ul className="space-y-1 text-xs sm:text-sm" style={{ color: 'var(--muted)' }}>
-              <li>• Passwords or OTPs</li>
-              <li>• Bank details or financial info</li>
-              <li>• Aadhaar, PAN, or ID documents</li>
-              <li>• Personal sensitive information</li>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
+          <div className="p-3 sm:p-4 md:p-5 rounded-xl border transition-all hover:scale-[1.02]" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-2 sm:gap-3 mb-3">
+              <div className="p-1.5 sm:p-2 rounded-lg" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+                <X size={14} className="sm:w-4 sm:h-4" />
+              </div>
+              <h3 className="font-bold text-sm sm:text-base md:text-lg" style={{ color: 'var(--fg)' }}>Never Share</h3>
+            </div>
+            <ul className="text-xs sm:text-sm space-y-1.5 sm:space-y-2" style={{ color: 'var(--muted)' }}>
+              <li className="flex items-center gap-2">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>Passwords/OTPs</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>Bank details</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>ID documents</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>Personal info</span>
+              </li>
             </ul>
           </div>
 
-          <div>
-            <h3 className="font-semibold mb-2 flex items-center gap-2" style={{ color: 'var(--fg)' }}>
-              <AlertCircle size={16} className="text-orange-500" />
-              Do NOT use for:
-            </h3>
-            <ul className="space-y-1 text-xs sm:text-sm" style={{ color: 'var(--muted)' }}>
-              <li>• Illegal activities or threats</li>
-              <li>• Harassment or abuse</li>
-              <li>• Financial scams or fraud</li>
-              <li>• Sharing harmful content</li>
+          <div className="p-3 sm:p-4 md:p-5 rounded-xl border transition-all hover:scale-[1.02]" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-2 sm:gap-3 mb-3">
+              <div className="p-1.5 sm:p-2 rounded-lg" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+                <AlertCircle size={14} className="sm:w-4 sm:h-4" />
+              </div>
+              <h3 className="font-bold text-sm sm:text-base md:text-lg" style={{ color: 'var(--fg)' }}>Prohibited</h3>
+            </div>
+            <ul className="text-xs sm:text-sm space-y-1.5 sm:space-y-2" style={{ color: 'var(--muted)' }}>
+              <li className="flex items-center gap-2">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>Illegal activities</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>Harassment</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>Scams/fraud</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>Harmful content</span>
+              </li>
             </ul>
           </div>
 
-          <div className="p-3 rounded-lg border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-            <p className="text-xs sm:text-sm flex items-center gap-2" style={{ color: 'var(--muted)' }}>
-              <Info size={14} className="text-blue-500 flex-shrink-0" />
-              All messages are temporary and not stored. Use responsibly.
-            </p>
+          <div className="p-3 sm:p-4 md:p-5 rounded-xl border transition-all hover:scale-[1.02] md:col-span-2 lg:col-span-1" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-2 sm:gap-3 mb-3">
+              <div className="p-1.5 sm:p-2 rounded-lg" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+                <Shield size={14} className="sm:w-4 sm:h-4" />
+              </div>
+              <h3 className="font-bold text-sm sm:text-base md:text-lg" style={{ color: 'var(--fg)' }}>Privacy</h3>
+            </div>
+            <p className="text-xs sm:text-sm mb-3" style={{ color: 'var(--muted)' }}>Messages auto-delete after session</p>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm" style={{ color: 'var(--fg)' }}>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>Temporary</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style={{ background: 'var(--fg)' }}></div>
+                <span>No Storage</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="mt-6 space-y-3">
+        <div className="space-y-4">
           <button
             onClick={onAccept}
-            className="w-full font-medium py-3 px-6 rounded-lg transition-colors border"
+            className="w-full font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl border text-sm sm:text-base transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 sm:gap-3"
             style={{ background: 'var(--fg)', color: 'var(--bg)', borderColor: 'var(--fg)' }}
           >
-            I Understand - Continue
+            <CheckCircle size={16} className="sm:w-5 sm:h-5" />
+            <span>I Understand & Accept</span>
+            <ArrowRight size={16} className="sm:w-5 sm:h-5" />
           </button>
-          <p className="text-xs text-center" style={{ color: 'var(--muted)' }}>
-            Report misuse: <span style={{ color: 'var(--fg)' }}>report@m-chat.com</span>
-          </p>
+          
+          <div className="text-center p-3 sm:p-4 rounded-xl border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Info size={14} className="sm:w-4 sm:h-4" style={{ color: 'var(--muted)' }} />
+              <span className="font-bold text-xs sm:text-sm" style={{ color: 'var(--fg)' }}>Need Help?</span>
+            </div>
+            <p className="text-xs sm:text-sm" style={{ color: 'var(--muted)' }}>
+              Report misuse or get support:
+            </p>
+            <div className="flex items-center justify-center gap-1.5 mt-1">
+              <Mail size={12} className="sm:w-3 sm:h-3" style={{ color: 'var(--fg)' }} />
+              <span className="font-bold text-xs sm:text-sm" style={{ color: 'var(--fg)' }}>report@m-chat.com</span>
+            </div>
+          </div>
         </div>
-
-
       </div>
     </div>
   );
