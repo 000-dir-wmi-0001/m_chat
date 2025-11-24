@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
-import { Copy } from 'lucide-react';
+import { Copy, QrCode } from 'lucide-react';
+import QRScanner from './QRScanner';
 
 interface HomeScreenProps {
   onGenerateCode: () => void;
@@ -15,6 +16,7 @@ export default function HomeScreen({ onGenerateCode, onJoinCode, generatedCode =
   const [isGenerating, setIsGenerating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
 
 
   const handleGenerateCode = () => {
@@ -154,6 +156,14 @@ export default function HomeScreen({ onGenerateCode, onJoinCode, generatedCode =
                     maxLength={6}
                     disabled={isJoining}
                   />
+                  <button
+                    onClick={() => setShowScanner(true)}
+                    className="w-full font-medium py-2.5 sm:py-3 lg:py-4 px-4 sm:px-6 lg:px-8 rounded-lg transition-colors border flex items-center justify-center gap-2 text-sm sm:text-base lg:text-lg"
+                    style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
+                  >
+                    <QrCode size={18} />
+                    Scan QR Code
+                  </button>
                   <p className="text-xs sm:text-sm lg:text-base text-center" style={{ color: 'var(--muted)' }}>
                     Auto-joins when 6 digits entered or QR scanned
                   </p>
@@ -179,6 +189,16 @@ export default function HomeScreen({ onGenerateCode, onJoinCode, generatedCode =
 
         </div>
       </div>
+      
+      {showScanner && (
+        <QRScanner
+          onScan={(code) => {
+            setShowScanner(false);
+            handleCodeInput(code);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   );
 }
