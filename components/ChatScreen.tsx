@@ -17,12 +17,14 @@ interface ChatScreenProps {
   messages: Message[];
   onSendMessage: (message: string, file?: { name: string; data: string; type: string; size: number }) => void;
   onLeaveChat: () => void;
+  totalUsers: number;
 }
 
-export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveChat }: ChatScreenProps) {
+export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveChat, totalUsers }: ChatScreenProps) {
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; data: string; type: string; size: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, toggleTheme } = useTheme();
@@ -31,20 +33,17 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = (file?: { name: string; data: string; type: string; size: number }) => {
-    if ((messageInput.trim() || file) && !isSending) {
+  const handleSendMessage = () => {
+    if ((messageInput.trim() || selectedFile) && !isSending) {
       setIsSending(true);
-      onSendMessage(messageInput.trim() || (file ? `📎 ${file.name}` : ''), file);
+      onSendMessage(messageInput.trim(), selectedFile || undefined);
       setMessageInput('');
+      setSelectedFile(null);
       setTimeout(() => setIsSending(false), 1000);
     }
   };
 
   const handleFileSelect = (file: File) => {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File too large. Maximum size is 5MB.');
-      return;
-    }
     const reader = new FileReader();
     reader.onload = () => {
       const fileData = {
@@ -53,7 +52,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
         type: file.type,
         size: file.size
       };
-      handleSendMessage(fileData);
+      setSelectedFile(fileData);
     };
     reader.readAsDataURL(file);
   };
@@ -76,7 +75,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && totalUsers >= 2) {
       handleSendMessage();
     }
   };
@@ -105,7 +104,6 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           <div className="text-center p-8 rounded-2xl border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             <div className="text-4xl mb-4">📁</div>
             <p className="text-xl font-bold" style={{ color: 'var(--fg)' }}>Drop file to share</p>
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>Maximum 5MB</p>
           </div>
         </div>
       )}
@@ -122,6 +120,9 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           >
             <Copy size={14} />
           </button>
+          <span className="text-xs sm:text-sm px-2 py-1 rounded" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+            👥 {totalUsers}
+          </span>
         </div>
         <div className="flex items-center space-x-2">
           <button
@@ -140,6 +141,12 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           </button>
         </div>
       </div>
+
+      {totalUsers < 2 && (
+        <div className="bg-yellow-500 text-black px-4 py-2 text-center text-sm">
+          ⏳ Waiting for others to join... ({totalUsers}/2)
+        </div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4" style={{ maxHeight: 'calc(100vh - 140px)' }}>
@@ -178,7 +185,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
                           Download
                         </button>
                       </div>
-                      {message.text && message.text !== `📎 ${message.file.name}` && (
+                      {message.text && (
                         <pre className="text-sm sm:text-base break-words whitespace-pre-wrap font-sans">{message.text}</pre>
                       )}
                     </div>
@@ -206,33 +213,48 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
 
       {/* Message Input */}
       <div className="border-t p-3 sm:p-4" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+        {selectedFile && (
+          <div className="mb-2 p-2 rounded border flex items-center justify-between" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+            <span className="text-sm" style={{ color: 'var(--fg)' }}>📎 {selectedFile.name}</span>
+            <button
+              onClick={() => setSelectedFile(null)}
+              className="text-xs px-2 py-1 rounded"
+              style={{ background: 'var(--fg)', color: 'var(--bg)' }}
+            >
+              Remove
+            </button>
+          </div>
+        )}
         <div className="flex space-x-2 sm:space-x-3">
           <input
             type="text"
-            placeholder="Type a message or drag & drop file..."
+            placeholder={totalUsers < 2 ? "Waiting for others to join..." : "Type a message or drag & drop file..."}
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-full focus:outline-none text-sm sm:text-base"
+            disabled={totalUsers < 2}
+            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-full focus:outline-none text-sm sm:text-base disabled:opacity-50"
             style={{ background: 'var(--input)', borderColor: 'var(--border)', color: 'var(--fg)' }}
           />
           <input
             ref={fileInputRef}
             type="file"
             className="hidden"
+            accept="*/*"
             onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-colors border flex items-center justify-center text-sm sm:text-base"
+            disabled={totalUsers < 2}
+            className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-colors border flex items-center justify-center text-sm sm:text-base disabled:opacity-50"
             style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
             title="Attach file"
           >
             📎
           </button>
           <button
-            onClick={() => handleSendMessage()}
-            disabled={!messageInput.trim() || isSending}
+            onClick={handleSendMessage}
+            disabled={(!messageInput.trim() && !selectedFile) || isSending || totalUsers < 2}
             className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-full transition-colors border disabled:opacity-50 flex items-center justify-center min-w-[60px] sm:min-w-[80px] text-sm sm:text-base"
             style={{ background: 'var(--fg)', color: 'var(--bg)', borderColor: 'var(--fg)' }}
           >
