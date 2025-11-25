@@ -22,11 +22,11 @@ export default function ChatApp() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [displayCode, setDisplayCode] = useState<string>('');
+  const [totalUsers, setTotalUsers] = useState(1);
 
   useEffect(() => {
     const newSocket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'ws://localhost:3001', {
       transports: ['websocket'],
-      maxPayload: 50 * 1024 * 1024,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
@@ -58,6 +58,7 @@ export default function ChatApp() {
       if (response.code) {
         setRoomCode(response.code);
         setDisplayCode(response.code);
+        setTotalUsers(1);
       }
     });
   };
@@ -66,6 +67,7 @@ export default function ChatApp() {
     socket?.emit('joinRoom', { code }, (response: any) => {
       if (response.success) {
         setRoomCode(code);
+        setTotalUsers(response.totalUsers || 1);
         setMessages(response.messages?.map((msg: any, index: number) => ({
           id: index.toString(),
           text: msg.text,
@@ -136,22 +138,25 @@ export default function ChatApp() {
       }
     };
 
-    const handleUserJoined = (data: { userId: string }) => {
+    const handleUserJoined = (data: { userId: string; totalUsers: number }) => {
       console.log('User joined:', data.userId);
-      if (screen === 'home' && roomCode) {
+      setTotalUsers(data.totalUsers);
+      if (screen === 'home' && roomCode && data.totalUsers === 2) {
         setScreen('chat');
       }
     };
 
-    const handleUserLeft = (data: { userId: string }) => {
+    const handleUserLeft = (data: { userId: string; totalUsers: number }) => {
       console.log('User left:', data.userId);
+      setTotalUsers(data.totalUsers);
     };
 
     const handleUserDisconnected = () => {
-      alert('Other user disconnected. Returning to home.');
+      alert('Room closed. Returning to home.');
       setScreen('home');
       setRoomCode('');
       setMessages([]);
+      setTotalUsers(1);
     };
 
     socket.on('newMessage', handleNewMessage);
@@ -178,6 +183,7 @@ export default function ChatApp() {
     setScreen('home');
     setRoomCode('');
     setMessages([]);
+    setTotalUsers(1);
   };
 
   if (screen === 'warning') {
@@ -206,6 +212,7 @@ export default function ChatApp() {
       messages={messages}
       onSendMessage={sendMessage}
       onLeaveChat={leaveChat}
+      totalUsers={totalUsers}
     />
   );
 }

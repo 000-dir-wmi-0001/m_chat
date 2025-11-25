@@ -17,9 +17,10 @@ interface ChatScreenProps {
   messages: Message[];
   onSendMessage: (message: string, file?: { name: string; data: string; type: string; size: number }) => void;
   onLeaveChat: () => void;
+  totalUsers: number;
 }
 
-export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveChat }: ChatScreenProps) {
+export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveChat, totalUsers }: ChatScreenProps) {
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -74,7 +75,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && totalUsers >= 2) {
       handleSendMessage();
     }
   };
@@ -119,6 +120,9 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           >
             <Copy size={14} />
           </button>
+          <span className="text-xs sm:text-sm px-2 py-1 rounded" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+            👥 {totalUsers}
+          </span>
         </div>
         <div className="flex items-center space-x-2">
           <button
@@ -137,6 +141,12 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           </button>
         </div>
       </div>
+
+      {totalUsers < 2 && (
+        <div className="bg-yellow-500 text-black px-4 py-2 text-center text-sm">
+          ⏳ Waiting for others to join... ({totalUsers}/2)
+        </div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4" style={{ maxHeight: 'calc(100vh - 140px)' }}>
@@ -218,11 +228,12 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
         <div className="flex space-x-2 sm:space-x-3">
           <input
             type="text"
-            placeholder="Type a message or drag & drop file..."
+            placeholder={totalUsers < 2 ? "Waiting for others to join..." : "Type a message or drag & drop file..."}
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-full focus:outline-none text-sm sm:text-base"
+            disabled={totalUsers < 2}
+            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-full focus:outline-none text-sm sm:text-base disabled:opacity-50"
             style={{ background: 'var(--input)', borderColor: 'var(--border)', color: 'var(--fg)' }}
           />
           <input
@@ -234,7 +245,8 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-colors border flex items-center justify-center text-sm sm:text-base"
+            disabled={totalUsers < 2}
+            className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-colors border flex items-center justify-center text-sm sm:text-base disabled:opacity-50"
             style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
             title="Attach file"
           >
@@ -242,7 +254,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           </button>
           <button
             onClick={handleSendMessage}
-            disabled={!messageInput.trim() && !selectedFile || isSending}
+            disabled={(!messageInput.trim() && !selectedFile) || isSending || totalUsers < 2}
             className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-full transition-colors border disabled:opacity-50 flex items-center justify-center min-w-[60px] sm:min-w-[80px] text-sm sm:text-base"
             style={{ background: 'var(--fg)', color: 'var(--bg)', borderColor: 'var(--fg)' }}
           >
