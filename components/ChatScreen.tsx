@@ -23,6 +23,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; data: string; type: string; size: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, toggleTheme } = useTheme();
@@ -31,20 +32,17 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = (file?: { name: string; data: string; type: string; size: number }) => {
-    if ((messageInput.trim() || file) && !isSending) {
+  const handleSendMessage = () => {
+    if ((messageInput.trim() || selectedFile) && !isSending) {
       setIsSending(true);
-      onSendMessage(messageInput.trim() || (file ? `📎 ${file.name}` : ''), file);
+      onSendMessage(messageInput.trim(), selectedFile || undefined);
       setMessageInput('');
+      setSelectedFile(null);
       setTimeout(() => setIsSending(false), 1000);
     }
   };
 
   const handleFileSelect = (file: File) => {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File too large. Maximum size is 5MB.');
-      return;
-    }
     const reader = new FileReader();
     reader.onload = () => {
       const fileData = {
@@ -53,7 +51,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
         type: file.type,
         size: file.size
       };
-      handleSendMessage(fileData);
+      setSelectedFile(fileData);
     };
     reader.readAsDataURL(file);
   };
@@ -105,7 +103,6 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           <div className="text-center p-8 rounded-2xl border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             <div className="text-4xl mb-4">📁</div>
             <p className="text-xl font-bold" style={{ color: 'var(--fg)' }}>Drop file to share</p>
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>Maximum 5MB</p>
           </div>
         </div>
       )}
@@ -178,7 +175,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
                           Download
                         </button>
                       </div>
-                      {message.text && message.text !== `📎 ${message.file.name}` && (
+                      {message.text && (
                         <pre className="text-sm sm:text-base break-words whitespace-pre-wrap font-sans">{message.text}</pre>
                       )}
                     </div>
@@ -206,6 +203,18 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
 
       {/* Message Input */}
       <div className="border-t p-3 sm:p-4" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+        {selectedFile && (
+          <div className="mb-2 p-2 rounded border flex items-center justify-between" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+            <span className="text-sm" style={{ color: 'var(--fg)' }}>📎 {selectedFile.name}</span>
+            <button
+              onClick={() => setSelectedFile(null)}
+              className="text-xs px-2 py-1 rounded"
+              style={{ background: 'var(--fg)', color: 'var(--bg)' }}
+            >
+              Remove
+            </button>
+          </div>
+        )}
         <div className="flex space-x-2 sm:space-x-3">
           <input
             type="text"
@@ -220,6 +229,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
             ref={fileInputRef}
             type="file"
             className="hidden"
+            accept="*/*"
             onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
           />
           <button
@@ -231,8 +241,8 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
             📎
           </button>
           <button
-            onClick={() => handleSendMessage()}
-            disabled={!messageInput.trim() || isSending}
+            onClick={handleSendMessage}
+            disabled={!messageInput.trim() && !selectedFile || isSending}
             className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-full transition-colors border disabled:opacity-50 flex items-center justify-center min-w-[60px] sm:min-w-[80px] text-sm sm:text-base"
             style={{ background: 'var(--fg)', color: 'var(--bg)', borderColor: 'var(--fg)' }}
           >

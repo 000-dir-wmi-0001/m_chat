@@ -13,6 +13,7 @@ interface Message {
   text: string;
   sender: 'me' | 'other';
   timestamp: Date;
+  file?: { name: string; data: string; type: string; size: number };
 }
 
 export default function ChatApp() {
@@ -23,7 +24,14 @@ export default function ChatApp() {
   const [displayCode, setDisplayCode] = useState<string>('');
 
   useEffect(() => {
-    const newSocket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'ws://localhost:3001');
+    const newSocket = io(process.env.NEXT_PUBLIC_BACKEND_URL || 'ws://localhost:3001', {
+      transports: ['websocket'],
+      maxPayload: 50 * 1024 * 1024,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    });
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -71,17 +79,35 @@ export default function ChatApp() {
     });
   };
 
-  const sendMessage = (message: string) => {
-    socket?.emit('sendMessage', { code: roomCode, text: message }, (response: { success: boolean }) => {
-      if (response.success) {
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          text: message,
-          sender: 'me',
-          timestamp: new Date()
-        }]);
-      }
-    });
+  const sendMessage = (message: string, file?: { name: string; data: string; type: string; size: number }) => {
+    if (file) {
+      socket?.emit('sendFile', { code: roomCode, file }, (response: { success: boolean; error?: string }) => {
+        if (response.success) {
+          setMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            text: message,
+            sender: 'me',
+            timestamp: new Date(),
+            file
+          }]);
+        } else if (response.error) {
+          alert(response.error);
+        }
+      });
+    } else {
+      socket?.emit('sendMessage', { code: roomCode, text: message }, (response: { success: boolean; error?: string }) => {
+        if (response.success) {
+          setMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            text: message,
+            sender: 'me',
+            timestamp: new Date()
+          }]);
+        } else if (response.error) {
+          alert(response.error);
+        }
+      });
+    }
   };
 
   useEffect(() => {
@@ -98,9 +124,20 @@ export default function ChatApp() {
       }
     };
 
+    const handleReceiveFile = (data: { sender: string; file: { name: string; data: string; type: string; size: number }; timestamp: number }) => {
+      if (data.sender !== socket.id) {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          text: '',
+          sender: 'other',
+          timestamp: new Date(data.timestamp),
+          file: data.file
+        }]);
+      }
+    };
+
     const handleUserJoined = (data: { userId: string }) => {
       console.log('User joined:', data.userId);
-      // Auto-redirect to chat when someone joins your room
       if (screen === 'home' && roomCode) {
         setScreen('chat');
       }
@@ -118,12 +155,14 @@ export default function ChatApp() {
     };
 
     socket.on('newMessage', handleNewMessage);
+    socket.on('receiveFile', handleReceiveFile);
     socket.on('userJoined', handleUserJoined);
     socket.on('userLeft', handleUserLeft);
     socket.on('userDisconnected', handleUserDisconnected);
 
     return () => {
       socket.off('newMessage', handleNewMessage);
+      socket.off('receiveFile', handleReceiveFile);
       socket.off('userJoined', handleUserJoined);
       socket.off('userLeft', handleUserLeft);
       socket.off('userDisconnected', handleUserDisconnected);
@@ -135,7 +174,6 @@ export default function ChatApp() {
   };
 
   const leaveChat = () => {
-    // Emit leave room event to notify other user
     socket?.emit('leaveRoom', { code: roomCode });
     setScreen('home');
     setRoomCode('');
