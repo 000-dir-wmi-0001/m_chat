@@ -27,11 +27,20 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
   const [selectedFile, setSelectedFile] = useState<{ name: string; data: string; type: string; size: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessageInput(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    }
+  };
 
   const handleSendMessage = () => {
     if ((messageInput.trim() || selectedFile) && !isSending) {
@@ -39,6 +48,9 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
       onSendMessage(messageInput.trim(), selectedFile || undefined);
       setMessageInput('');
       setSelectedFile(null);
+      if (textareaRef.current) {
+        textareaRef.current.style.height = '44px';
+      }
       setTimeout(() => setIsSending(false), 1000);
     }
   };
@@ -74,8 +86,9 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
     setIsDragging(false);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && totalUsers >= 2) {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && totalUsers >= 2) {
+      e.preventDefault();
       handleSendMessage();
     }
   };
@@ -225,17 +238,19 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
             </button>
           </div>
         )}
-        <div className="flex space-x-2 sm:space-x-3">
-          <input
-            type="text"
-            placeholder={totalUsers < 2 ? "Waiting for others to join..." : "Type a message or drag & drop file..."}
-            value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={totalUsers < 2}
-            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-full focus:outline-none text-sm sm:text-base disabled:opacity-50"
-            style={{ background: 'var(--input)', borderColor: 'var(--border)', color: 'var(--fg)' }}
-          />
+        <div className="flex gap-2 sm:gap-3">
+          <div className="flex-1 flex flex-col">
+            <textarea
+              ref={textareaRef}
+              placeholder={totalUsers < 2 ? "Waiting for others to join..." : "Type a message (Shift+Enter for new line)..."}
+              value={messageInput}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              disabled={totalUsers < 2}
+              className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none text-sm sm:text-base disabled:opacity-50 resize-none"
+              style={{ background: 'var(--input)', borderColor: 'var(--border)', color: 'var(--fg)', minHeight: '44px', maxHeight: '200px' }}
+            />
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -243,28 +258,31 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
             accept="*/*"
             onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={totalUsers < 2}
-            className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-full transition-colors border flex items-center justify-center text-sm sm:text-base disabled:opacity-50"
-            style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
-            title="Attach file"
-          >
-            📎
-          </button>
-          <button
-            onClick={handleSendMessage}
-            disabled={(!messageInput.trim() && !selectedFile) || isSending || totalUsers < 2}
-            className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-full transition-colors border disabled:opacity-50 flex items-center justify-center min-w-[60px] sm:min-w-[80px] text-sm sm:text-base"
-            style={{ background: 'var(--fg)', color: 'var(--bg)', borderColor: 'var(--fg)' }}
-          >
-            {isSending ? (
-              <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-current border-t-transparent"></div>
-            ) : (
-              <Send size={16} />
-            )}
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={totalUsers < 2}
+              className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-colors border flex items-center justify-center text-sm sm:text-base disabled:opacity-50"
+              style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
+              title="Attach file"
+            >
+              📎
+            </button>
+            <button
+              onClick={handleSendMessage}
+              disabled={(!messageInput.trim() && !selectedFile) || isSending || totalUsers < 2}
+              className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-colors border disabled:opacity-50 flex items-center justify-center min-w-[60px] sm:min-w-[80px] text-sm sm:text-base"
+              style={{ background: 'var(--fg)', color: 'var(--bg)', borderColor: 'var(--fg)' }}
+            >
+              {isSending ? (
+                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-current border-t-transparent"></div>
+              ) : (
+                <Send size={16} />
+              )}
+            </button>
+          </div>
         </div>
+
         <div className="text-center mt-2">
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
             Made by <a href="https://momin-mohasin.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:underline font-medium" style={{ color: 'var(--fg)' }}>Momin Mohasin</a>
