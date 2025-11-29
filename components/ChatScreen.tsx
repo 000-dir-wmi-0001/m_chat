@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Activity } from 'react';
 import { useTheme } from './ThemeProvider';
-import { Copy, Moon, Sun, Send, Phone } from 'lucide-react';
+import { Copy, Moon, Sun, Send, Phone, Users, Clock, Paperclip, Download } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -117,7 +117,11 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
       <Activity mode={isDragging ? 'visible' : 'hidden'}>
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.8)' }}>
           <div className="text-center p-8 rounded-2xl border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-            <div className="text-4xl mb-4">📁</div>
+            <div className="mb-4 flex justify-center">
+              <div className="p-3 rounded-lg" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+                <Paperclip size={32} />
+              </div>
+            </div>
             <p className="text-xl font-bold" style={{ color: 'var(--fg)' }}>Drop file to share</p>
           </div>
         </div>
@@ -136,8 +140,8 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
           >
             <Copy size={14} />
           </button>
-          <span className="text-xs sm:text-sm px-2 py-1 rounded" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
-            👥 {totalUsers}
+          <span className="text-xs sm:text-sm px-2 py-1 rounded flex items-center gap-1" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+            <Users size={14} /> {totalUsers}
           </span>
         </div>
         <div className="flex items-center space-x-2">
@@ -168,8 +172,8 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
       </div>
 
       <Activity mode={totalUsers < 2 ? 'visible' : 'hidden'}>
-        <div className="bg-yellow-500 text-black px-4 py-2 text-center text-sm">
-          ⏳ Waiting for others to join... ({totalUsers}/2)
+        <div className="bg-yellow-500 text-black px-4 py-2 text-center text-sm flex items-center justify-center gap-2">
+          <Clock size={16} /> Waiting for others to join... ({totalUsers}/2)
         </div>
       </Activity>
 
@@ -197,7 +201,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
                   {message.file ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 p-2 rounded border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-                        <span className="text-lg">📎</span>
+                        <Paperclip size={16} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{message.file.name}</p>
                           <p className="text-xs opacity-70">{(message.file.size / 1024).toFixed(1)} KB</p>
@@ -240,7 +244,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
       <div className="border-t p-3 sm:p-4" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
         <Activity mode={selectedFile ? 'visible' : 'hidden'}>
           <div className="mb-2 p-2 rounded border flex items-center justify-between" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-            <span className="text-sm" style={{ color: 'var(--fg)' }}>📎 {selectedFile?.name}</span>
+            <span className="text-sm flex items-center gap-1" style={{ color: 'var(--fg)' }}><Paperclip size={14} /> {selectedFile?.name}</span>
             <button
               onClick={() => setSelectedFile(null)}
               className="text-xs px-2 py-1 rounded"
@@ -279,7 +283,7 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
               style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
               title="Attach file"
             >
-              📎
+              <Paperclip size={16} />
             </button>
             <button
               onClick={handleSendMessage}

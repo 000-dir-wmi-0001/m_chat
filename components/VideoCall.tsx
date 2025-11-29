@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Activity } from 'react';
-import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, Download } from 'lucide-react';
+import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, Download, Volume2, Speaker } from 'lucide-react';
 import { Socket } from 'socket.io-client';
 
 interface VideoCallProps {
@@ -16,16 +16,22 @@ interface VideoCallProps {
 export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isInitiator }: VideoCallProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteDescriptionSetRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callActive, setCallActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [remoteVolume, setRemoteVolume] = useState(100);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [speakingUser, setSpeakingUser] = useState<'local' | 'remote' | null>(null);
   const offerSentRef = useRef(false);
   const localStreamRef = useRef<MediaStream | null>(null);
   const callStartTimeRef = useRef<number | null>(null);
@@ -40,6 +46,19 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
   }, [callActive]);
 
   useEffect(() => {
+    if (!analyserRef.current) return;
+    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+    const checkAudio = () => {
+      analyserRef.current!.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      setAudioLevel(Math.round(average));
+      setSpeakingUser(average > 30 ? 'local' : null);
+      requestAnimationFrame(checkAudio);
+    };
+    checkAudio();
+  }, []);
+
+  useEffect(() => {
     if (!socket) return;
 
     const handleCallEnded = () => {
@@ -49,21 +68,25 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
 
     const handleOffer = async (data: { offer: RTCSessionDescriptionInit; from: string }) => {
       try {
-        console.log('🎬 Received offer from:', data.from);
         if (!peerConnectionRef.current) initPeerConnection();
         
         if (!localStreamRef.current) {
-          console.log('📹 Getting local media stream');
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true, 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
           localStreamRef.current = stream;
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = stream;
           }
+          setupAudioAnalyser(stream);
           stream.getTracks().forEach(track => peerConnectionRef.current!.addTrack(track, stream));
-          console.log('✅ Local stream added to peer connection');
         }
         
-        console.log('🔗 Setting remote description');
         await peerConnectionRef.current!.setRemoteDescription(new RTCSessionDescription(data.offer));
         remoteDescriptionSetRef.current = true;
         
@@ -74,11 +97,9 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
           }
         }
         
-        console.log('📝 Creating answer');
         const answer = await peerConnectionRef.current!.createAnswer();
         await peerConnectionRef.current!.setLocalDescription(answer);
         socket.emit('answer', { answer, code: roomCode });
-        console.log('📤 Answer sent');
         
         setCallActive(true);
       } catch (error) {
@@ -88,9 +109,7 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
 
     const handleAnswer = async (data: { answer: RTCSessionDescriptionInit }) => {
       try {
-        console.log('🎬 Received answer');
         if (peerConnectionRef.current && peerConnectionRef.current.signalingState === 'have-local-offer') {
-          console.log('🔗 Setting remote description for answer');
           await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
           remoteDescriptionSetRef.current = true;
           
@@ -135,36 +154,66 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
 
   useEffect(() => {
     if (totalUsers === 2 && !callActive && !offerSentRef.current && isInitiator) {
-      console.log('👥 Both users present, initiator starting call');
       const timer = setTimeout(() => startCall(), 500);
       return () => clearTimeout(timer);
     }
   }, [totalUsers, callActive, isInitiator]);
 
+  const setupAudioAnalyser = (stream: MediaStream) => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    const source = audioContextRef.current.createMediaStreamSource(stream);
+    const analyser = audioContextRef.current.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    analyserRef.current = analyser;
+  };
+
   const initPeerConnection = () => {
-    console.log('🔧 Initializing peer connection');
     const peerConnection = new RTCPeerConnection({
       iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }]
     });
 
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log('🧊 Sending ICE candidate');
         socket?.emit('ice-candidate', { candidate: event.candidate, code: roomCode });
       }
     };
 
     peerConnection.ontrack = (event) => {
-      console.log('🎥 Received remote track');
-      if (remoteVideoRef.current) {
+      if (event.track.kind === 'video' && remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
         remoteVideoRef.current.play().catch(e => {
           if (e.name !== 'AbortError') console.error('Play error:', e);
         });
+      } else if (event.track.kind === 'audio' && remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = event.streams[0];
+        remoteAudioRef.current.volume = remoteVolume / 100;
+        setupRemoteAudioAnalyser(event.streams[0]);
       }
     };
 
     peerConnectionRef.current = peerConnection;
+  };
+
+  const setupRemoteAudioAnalyser = (stream: MediaStream) => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    const source = audioContextRef.current.createMediaStreamSource(stream);
+    const analyser = audioContextRef.current.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const checkRemoteAudio = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      setSpeakingUser(average > 30 ? 'remote' : speakingUser === 'remote' ? null : speakingUser);
+      requestAnimationFrame(checkRemoteAudio);
+    };
+    checkRemoteAudio();
   };
 
   const startCall = async () => {
@@ -172,21 +221,25 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
       if (offerSentRef.current) return;
       offerSentRef.current = true;
 
-      console.log('📹 Getting local media stream');
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       localStreamRef.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
+      setupAudioAnalyser(stream);
 
       if (!peerConnectionRef.current) initPeerConnection();
       stream.getTracks().forEach(track => peerConnectionRef.current!.addTrack(track, stream));
-      console.log('✅ Local stream added to peer connection');
 
-      console.log('📝 Creating offer');
       const offer = await peerConnectionRef.current!.createOffer();
       await peerConnectionRef.current!.setLocalDescription(offer);
-      console.log('📤 Sending offer');
       socket?.emit('offer', { offer, code: roomCode });
 
       setCallActive(true);
@@ -274,6 +327,9 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
     if (remoteVideoRef.current?.srcObject) {
       (remoteVideoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
     }
+    if (remoteAudioRef.current?.srcObject) {
+      (remoteAudioRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+    }
     peerConnectionRef.current?.close();
     peerConnectionRef.current = null;
     localStreamRef.current = null;
@@ -314,6 +370,8 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
+      <audio ref={remoteAudioRef} autoPlay playsInline />
+      
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
         {/* Local Video */}
         <div className="relative rounded-lg overflow-hidden border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
@@ -324,9 +382,17 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
             muted
             className="w-full h-full object-cover"
           />
-          <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
-            You
+          <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+            You {speakingUser === 'local' && <Speaker size={14} />}
           </div>
+          {callActive && (
+            <div className="absolute bottom-4 left-4 w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-500 transition-all" 
+                style={{ width: `${Math.min(audioLevel, 100)}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Remote Video */}
@@ -337,9 +403,27 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
             playsInline
             className="w-full h-full object-cover"
           />
-          <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
-            Guest
+          <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
+            Guest {speakingUser === 'remote' && <Speaker size={14} />}
           </div>
+          {callActive && (
+            <div className="absolute bottom-4 right-4 flex items-center gap-2">
+              <Volume2 size={16} style={{ color: 'var(--fg)' }} />
+              <input 
+                type="range" 
+                min="0" 
+                max="100" 
+                value={remoteVolume}
+                onChange={(e) => {
+                  setRemoteVolume(Number(e.target.value));
+                  if (remoteAudioRef.current) {
+                    remoteAudioRef.current.volume = Number(e.target.value) / 100;
+                  }
+                }}
+                className="w-20"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -347,7 +431,7 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
       <Activity mode={callActive ? 'visible' : 'hidden'}>
         <div className="text-center py-2" style={{ background: 'var(--card)', borderColor: 'var(--border)', borderTop: '1px solid var(--border)' }}>
           <span style={{ color: 'var(--fg)', fontSize: '14px', fontWeight: '500' }}>
-            {formatDuration(callDuration)} {isRecording && '🔴 Recording'}
+            {formatDuration(callDuration)} {isRecording && <Download size={14} className="inline ml-2" style={{ color: '#ef4444' }} />}
           </span>
         </div>
       </Activity>

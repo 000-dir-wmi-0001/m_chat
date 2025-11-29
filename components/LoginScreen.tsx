@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Moon, Sun, Lock, MessageSquare, Database, Clock } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 
 interface LoginScreenProps {
@@ -40,7 +41,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             className="p-2 rounded-lg border"
             style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
           >
-            {theme === 'light' ? '🌙' : '☀️'}
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
         </div>
 
@@ -79,9 +80,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           </div>
 
           <div className="text-xs space-y-2" style={{ color: 'var(--muted)' }}>
-            <p>🔐 Secure temporary chat rooms</p>
-            <p>💬 No message storage or history</p>
-            <p>⏰ Rooms expire automatically</p>
+            <p className="flex items-center gap-2 justify-center"><Lock size={14} /> Secure temporary chat rooms</p>
+            <p className="flex items-center gap-2 justify-center"><Database size={14} /> No message storage or history</p>
+            <p className="flex items-center gap-2 justify-center"><Clock size={14} /> Rooms expire automatically</p>
           </div>
         </div>
       </div>
