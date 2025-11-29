@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Activity } from 'react';
 import { useTheme } from './ThemeProvider';
-import { Copy, Moon, Sun, Send } from 'lucide-react';
+import { Copy, Moon, Sun, Send, Phone } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -18,9 +19,10 @@ interface ChatScreenProps {
   onSendMessage: (message: string, file?: { name: string; data: string; type: string; size: number }) => void;
   onLeaveChat: () => void;
   totalUsers: number;
+  onStartVideo: () => void;
 }
 
-export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveChat, totalUsers }: ChatScreenProps) {
+export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveChat, totalUsers, onStartVideo }: ChatScreenProps) {
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -112,14 +114,15 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      {isDragging && (
+      <Activity mode={isDragging ? 'visible' : 'hidden'}>
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.8)' }}>
           <div className="text-center p-8 rounded-2xl border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             <div className="text-4xl mb-4">📁</div>
             <p className="text-xl font-bold" style={{ color: 'var(--fg)' }}>Drop file to share</p>
           </div>
         </div>
-      )}
+      </Activity>
+
       {/* Header */}
       <div className="shadow-sm border-b px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -139,6 +142,15 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
         </div>
         <div className="flex items-center space-x-2">
           <button
+            onClick={onStartVideo}
+            disabled={totalUsers < 2}
+            className="p-1.5 sm:p-2 rounded-lg border transition-colors disabled:opacity-50"
+            style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
+            title="Start video call"
+          >
+            <Phone size={18} />
+          </button>
+          <button
             onClick={toggleTheme}
             className="p-1.5 sm:p-2 rounded-lg border"
             style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--fg)' }}
@@ -155,11 +167,11 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
         </div>
       </div>
 
-      {totalUsers < 2 && (
+      <Activity mode={totalUsers < 2 ? 'visible' : 'hidden'}>
         <div className="bg-yellow-500 text-black px-4 py-2 text-center text-sm">
           ⏳ Waiting for others to join... ({totalUsers}/2)
         </div>
-      )}
+      </Activity>
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4" style={{ maxHeight: 'calc(100vh - 140px)' }}>
@@ -226,9 +238,9 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
 
       {/* Message Input */}
       <div className="border-t p-3 sm:p-4" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-        {selectedFile && (
+        <Activity mode={selectedFile ? 'visible' : 'hidden'}>
           <div className="mb-2 p-2 rounded border flex items-center justify-between" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-            <span className="text-sm" style={{ color: 'var(--fg)' }}>📎 {selectedFile.name}</span>
+            <span className="text-sm" style={{ color: 'var(--fg)' }}>📎 {selectedFile?.name}</span>
             <button
               onClick={() => setSelectedFile(null)}
               className="text-xs px-2 py-1 rounded"
@@ -237,7 +249,8 @@ export default function ChatScreen({ roomCode, messages, onSendMessage, onLeaveC
               Remove
             </button>
           </div>
-        )}
+        </Activity>
+
         <div className="flex gap-2 sm:gap-3">
           <div className="flex-1 flex flex-col">
             <textarea
