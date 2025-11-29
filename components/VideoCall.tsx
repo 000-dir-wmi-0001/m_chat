@@ -22,8 +22,7 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
   const recordedChunksRef = useRef<Blob[]>([]);
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteDescriptionSetRef = useRef(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
+
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callActive, setCallActive] = useState(false);
@@ -46,19 +45,6 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
   }, [callActive]);
 
   useEffect(() => {
-    if (!analyserRef.current) return;
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-    const checkAudio = () => {
-      analyserRef.current!.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-      setAudioLevel(Math.round(average));
-      setSpeakingUser(average > 30 ? 'local' : null);
-      requestAnimationFrame(checkAudio);
-    };
-    checkAudio();
-  }, []);
-
-  useEffect(() => {
     if (!socket) return;
 
     const handleCallEnded = () => {
@@ -73,17 +59,12 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
         if (!localStreamRef.current) {
           const stream = await navigator.mediaDevices.getUserMedia({ 
             video: true, 
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            }
+            audio: true
           });
           localStreamRef.current = stream;
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = stream;
           }
-          setupAudioAnalyser(stream);
           stream.getTracks().forEach(track => peerConnectionRef.current!.addTrack(track, stream));
         }
         
@@ -159,17 +140,6 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
     }
   }, [totalUsers, callActive, isInitiator]);
 
-  const setupAudioAnalyser = (stream: MediaStream) => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext();
-    }
-    const source = audioContextRef.current.createMediaStreamSource(stream);
-    const analyser = audioContextRef.current.createAnalyser();
-    analyser.fftSize = 256;
-    source.connect(analyser);
-    analyserRef.current = analyser;
-  };
-
   const initPeerConnection = () => {
     const peerConnection = new RTCPeerConnection({
       iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }]
@@ -189,31 +159,11 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
         });
       } else if (event.track.kind === 'audio' && remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = event.streams[0];
-        remoteAudioRef.current.volume = remoteVolume / 100;
-        setupRemoteAudioAnalyser(event.streams[0]);
+        remoteAudioRef.current.volume = Math.min(remoteVolume / 100, 1);
       }
     };
 
     peerConnectionRef.current = peerConnection;
-  };
-
-  const setupRemoteAudioAnalyser = (stream: MediaStream) => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext();
-    }
-    const source = audioContextRef.current.createMediaStreamSource(stream);
-    const analyser = audioContextRef.current.createAnalyser();
-    analyser.fftSize = 256;
-    source.connect(analyser);
-    
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    const checkRemoteAudio = () => {
-      analyser.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-      setSpeakingUser(average > 30 ? 'remote' : speakingUser === 'remote' ? null : speakingUser);
-      requestAnimationFrame(checkRemoteAudio);
-    };
-    checkRemoteAudio();
   };
 
   const startCall = async () => {
@@ -223,18 +173,12 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
 
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
+        audio: true
       });
       localStreamRef.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
-      setupAudioAnalyser(stream);
-
       if (!peerConnectionRef.current) initPeerConnection();
       stream.getTracks().forEach(track => peerConnectionRef.current!.addTrack(track, stream));
 
@@ -260,20 +204,8 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
       const localStream = localVideoRef.current?.srcObject as MediaStream;
       const remoteStream = remoteVideoRef.current?.srcObject as MediaStream;
 
-      const audioContext = new AudioContext();
-      const audioDestination = audioContext.createMediaStreamDestination();
-      
-      localStream?.getAudioTracks().forEach(track => {
-        const source = audioContext.createMediaStreamSource(new MediaStream([track]));
-        source.connect(audioDestination);
-      });
-      remoteStream?.getAudioTracks().forEach(track => {
-        const source = audioContext.createMediaStreamSource(new MediaStream([track]));
-        source.connect(audioDestination);
-      });
-
       const canvasStream = canvas.captureStream(30);
-      audioDestination.stream.getAudioTracks().forEach(track => canvasStream.addTrack(track));
+      remoteStream?.getAudioTracks().forEach(track => canvasStream.addTrack(track));
 
       const recorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm' });
       recordedChunksRef.current = [];
@@ -383,16 +315,8 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
             className="w-full h-full object-cover"
           />
           <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
-            You {speakingUser === 'local' && <Speaker size={14} />}
+            You
           </div>
-          {callActive && (
-            <div className="absolute bottom-4 left-4 w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-green-500 transition-all" 
-                style={{ width: `${Math.min(audioLevel, 100)}%` }}
-              />
-            </div>
-          )}
         </div>
 
         {/* Remote Video */}
@@ -404,7 +328,7 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
             className="w-full h-full object-cover"
           />
           <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1" style={{ background: 'var(--fg)', color: 'var(--bg)' }}>
-            Guest {speakingUser === 'remote' && <Speaker size={14} />}
+            Guest
           </div>
           {callActive && (
             <div className="absolute bottom-4 right-4 flex items-center gap-2">
@@ -415,9 +339,10 @@ export default function VideoCall({ roomCode, socket, onEndCall, totalUsers, isI
                 max="100" 
                 value={remoteVolume}
                 onChange={(e) => {
-                  setRemoteVolume(Number(e.target.value));
+                  const vol = Number(e.target.value);
+                  setRemoteVolume(vol);
                   if (remoteAudioRef.current) {
-                    remoteAudioRef.current.volume = Number(e.target.value) / 100;
+                    remoteAudioRef.current.volume = Math.min(vol / 100, 1);
                   }
                 }}
                 className="w-20"
