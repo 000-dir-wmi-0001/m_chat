@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Activity } from 'react';
 import QRCode from 'qrcode';
-import { Copy, QrCode, Phone } from 'lucide-react';
+import { Copy, QrCode, Phone, MessageCircle } from 'lucide-react';
 import QRScanner from './QRScanner';
 
 interface HomeScreenProps {
@@ -79,10 +79,10 @@ export default function HomeScreen({ onGenerateCode, onJoinCode, generatedCode =
         <div className="flex gap-2 mb-6 justify-center">
           <button
             onClick={() => setChatMode('text')}
-            className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${chatMode === 'text' ? 'opacity-100' : 'opacity-50'}`}
+            className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium flex items-center gap-2 ${chatMode === 'text' ? 'opacity-100' : 'opacity-50'}`}
             style={{ background: chatMode === 'text' ? 'var(--fg)' : 'var(--card)', color: chatMode === 'text' ? 'var(--bg)' : 'var(--fg)', borderColor: 'var(--border)' }}
           >
-            💬 Text Chat
+            <MessageCircle size={14} /> Text Chat
           </button>
           <button
             onClick={() => setChatMode('video')}
@@ -119,7 +119,8 @@ export default function HomeScreen({ onGenerateCode, onJoinCode, generatedCode =
                   <div className="text-center">
                     <p className="text-xs sm:text-sm lg:text-base mb-2 lg:mb-3" style={{ color: 'var(--muted)' }}>Or scan QR code:</p>
                     <div className="inline-block p-2 lg:p-3 border rounded-lg" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-                      <img src={qrCodeUrl} alt="QR Code" className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48" />
+                      {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48" />
+                      }
                     </div>
                   </div>
                 )}
